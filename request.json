@@ -1,0 +1,10 @@
+{
+  "action" : "cadastro-usuario",
+  "data" : {
+    "token" : "aklsdjaskljdaskl~djasldjasdj",
+    "nome" : "Allan Neves",
+    "email" : "allanfernandomn@gmail.com",
+    "senha" : "teste123",
+    "tipo" : "admin"
+  }
+}
