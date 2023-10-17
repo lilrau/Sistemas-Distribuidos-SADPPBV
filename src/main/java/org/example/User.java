@@ -8,24 +8,20 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class User {
-    private String token;
     private String name;
     private String email;
     private String password;
+    private String role;
 
-    public User(String name, String email, String password) {
-        this.token = token;
+    public User(String name, String email, String password, String role) {
         this.name = name;
         this.email = email;
         this.password = hashPassword(password);
+        this.role = role;
     }
 
     public User() {
 
-    }
-
-    public String getToken() {
-        return token;
     }
 
     public String getName() {
@@ -40,11 +36,15 @@ public class User {
         return password;
     }
 
-    public void register(String token, String name, String email, String password) {
-        this.token = token;
+    public String getRole() {
+        return role;
+    }
+
+    public void register(String name, String email, String password, String role) {
         this.name = name;
         this.email = email;
         this.password = hashPassword(password);
+        this.role = role;
     }
 
     public String hashPassword(String password) {

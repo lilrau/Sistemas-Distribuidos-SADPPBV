@@ -15,6 +15,8 @@ public class Server {
 
     public static void main(String[] args) throws IOException {
 
+        System.out.println("IP do servidor: " + InetAddress.getLocalHost().getHostAddress());
+
         ServerSocket serverSocket = null;
         BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
         System.out.println("Porta do servidor:");
@@ -76,14 +78,14 @@ public class Server {
                     if (action.equals("cadastro-usuario")) {
 
                         JsonNode dataNode = jsonNode.get("data");
-                        String token = dataNode.get("token").asText();
                         String name = dataNode.get("nome").asText();
                         String email = dataNode.get("email").asText();
                         String password = dataNode.get("senha").asText();
+                        String role = dataNode.get("tipo").asText();
 
                         // Crie um novo usuário com os dados recebidos e adicione-o à lista
                         User newUser = new User();
-                        newUser.register(token, name, email, password);
+                        newUser.register(name, email, password, role);
                         allUsers.add(newUser);
 
                         String error = "false";
@@ -97,11 +99,11 @@ public class Server {
                         dataMapRegister.put("error", error);
                         dataMapRegister.put("message", message);
 
+                        jsonMapRegister.put("data", dataMapRegister);
                         jsonRequest = objectMapper.writeValueAsString(jsonMapRegister);
 
                         // Enviar uma resposta de confirmação para o cliente, se necessário
                         PrintWriter outToClient = new PrintWriter(socket.getOutputStream(), true);
-                        outToClient.println(message);
                         outToClient.flush();
                         System.out.println(message);
                     } else if (action.equals("login")) {
@@ -115,19 +117,28 @@ public class Server {
                             // Login bem-sucedido
                             String error = "false";
                             String message = "Logado com sucesso!";
+
+                            // Criar o token
+                            TokenGenerator tokenGenerator = new TokenGenerator();
+                            String token = tokenGenerator.generateToken(1, loggedInUser.getRole());
+
+                            // Criar a sessão
+                            SessionManager.createSession(token, loggedInUser);
+
                             // Criar o JSON
-                            Map<String, Object> jsonMapRegister = new HashMap<>();
-                            jsonMapRegister.put("action", action);
+                            Map<String, Object> jsonMapLogin = new HashMap<>();
+                            jsonMapLogin.put("action", action);
+                            jsonMapLogin.put("error", error);
+                            jsonMapLogin.put("message", message);
 
-                            Map<String, String> dataMapRegister = new HashMap<>();
-                            dataMapRegister.put("error", error);
-                            dataMapRegister.put("message", message);
+                            Map<String, String> dataMapLogin = new HashMap<>();
+                            dataMapLogin.put("token", token);
 
-                            jsonRequest = objectMapper.writeValueAsString(jsonMapRegister);
+                            jsonMapLogin.put("data", dataMapLogin);
+                            jsonRequest = objectMapper.writeValueAsString(jsonMapLogin);
 
                             // Enviar uma resposta de confirmação para o cliente, se necessário
                             PrintWriter outToClient = new PrintWriter(socket.getOutputStream(), true);
-                            outToClient.println(message);
                             outToClient.flush();
                             System.out.println(message);
                         } else {
@@ -135,21 +146,32 @@ public class Server {
                             String error = "true";
                             String message = "Erro ao logar! Verifique as credenciais e tente novamente.";
                             // Criar o JSON
-                            Map<String, Object> jsonMapRegister = new HashMap<>();
-                            jsonMapRegister.put("action", action);
+                            Map<String, Object> jsonMapLogin = new HashMap<>();
+                            jsonMapLogin.put("action", action);
+                            jsonMapLogin.put("error", error);
+                            jsonMapLogin.put("message", message);
 
-                            Map<String, String> dataMapRegister = new HashMap<>();
-                            dataMapRegister.put("error", error);
-                            dataMapRegister.put("message", message);
-
-                            jsonRequest = objectMapper.writeValueAsString(jsonMapRegister);
+                            jsonRequest = objectMapper.writeValueAsString(jsonMapLogin);
 
                             // Enviar uma resposta de confirmação para o cliente, se necessário
                             PrintWriter outToClient = new PrintWriter(socket.getOutputStream(), true);
-                            outToClient.println(message);
                             outToClient.flush();
                             System.out.println(message);
                         }
+                    } else if (action.equals("logout")) {
+                        JsonNode dataNode = jsonNode.get("data");
+                        String token = dataNode.get("token").asText();
+
+                        SessionManager.removeSession(token);
+
+                        String error = "true";
+                        String message = "Logout efetuado com sucesso!";
+
+                        // Criar o JSON
+                        Map<String, Object> jsonMapLogin = new HashMap<>();
+                        jsonMapLogin.put("action", action);
+                        jsonMapLogin.put("error", error);
+                        jsonMapLogin.put("message", message);
                     }
                     
         
@@ -158,6 +180,11 @@ public class Server {
                             
                     // Limpe o StringBuilder para a próxima solicitação
                     jsonBuilder.setLength(0);
+
+                    // Enviar o JSON para o cliente
+                    PrintWriter outToClient = new PrintWriter(socket.getOutputStream(), true);
+                    outToClient.println(jsonRequest);
+                    outToClient.flush();
                 }
             }
         } catch (IOException e) {
